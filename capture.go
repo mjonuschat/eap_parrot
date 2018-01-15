@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"log"
 )
@@ -41,6 +42,24 @@ func setupCaptureDevice(device *string, promiscuous *bool) ListenInterface {
 		fd:     fd,
 		handle: handle,
 	}
+}
+
+// Decide if we want to forward a packet from the router.
+// We might want to ignore START and LOGOFF packets emitted by the AT&T CPE.
+func handleRouterPacket(packet gopacket.Packet, ignoreStart *bool, ignoreLogoff *bool) bool {
+	if eapolLayer := packet.Layer(layers.LayerTypeEAPOL); eapolLayer != nil {
+		eapol, _ := eapolLayer.(*layers.EAPOL)
+		if *ignoreStart && eapol.Type == layers.EAPOLTypeStart {
+			log.Println("Ignoring START packet from Router")
+			return false
+		}
+		if *ignoreLogoff && eapol.Type == layers.EAPOLTypeLogOff {
+			log.Println("Ignoreing LOGOFF packet from Router")
+			return false
+		}
+	}
+
+	return true
 }
 
 // Emit a captured packet onto the wire through the given pcap handle.

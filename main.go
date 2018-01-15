@@ -12,6 +12,9 @@ func main() {
 	ifRouter := flag.String("if-router", "eth2", "interface of the AT&T router")
 	promiscuous := flag.Bool("promiscuous", false, "place interfaces into promiscuous mode instead of multicast")
 
+	ignoreStart := flag.Bool("ignore-start", false, "ignore EAPOL Start packets from router")
+	ignoreLogoff := flag.Bool("ignore-logoff", false, "ignore EAPOL Logoff packets from router")
+
 	debug := flag.Bool("debug", false, "enable debug-level logging")
 	debugPackets := flag.Bool("debug-packets", false, "print packets in hex format to assist with debugging")
 
@@ -46,7 +49,9 @@ func main() {
 			} else if *debug {
 				fmt.Println(*ifRouter, packet.String())
 			}
-			emitPacket(packet, wanInterface.handle)
+			if handleRouterPacket(packet, ignoreStart, ignoreLogoff) {
+				emitPacket(packet, wanInterface.handle)
+			}
 		}
 	}
 }
