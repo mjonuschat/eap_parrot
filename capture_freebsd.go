@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"log"
 	"syscall"
 	"unsafe"
 )
@@ -30,7 +30,7 @@ func joinMulticastGroup(device *string) (fd int) {
 
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
 	if err != nil {
-		log.Fatalf("Error opening socket for interface %s", *device)
+		log.WithFields(logrus.Fields{"device": *device}).Fatal("Error opening socket")
 	}
 
 	ifReq := IfReq{
@@ -52,9 +52,9 @@ func joinMulticastGroup(device *string) (fd int) {
 		uintptr(unsafe.Pointer(&ifReq)),
 	)
 	if errNo == syscall.EADDRINUSE {
-		log.Printf("Interface %s is already listing for multicast EAP packets...", *device)
+		log.WithFields(logrus.Fields{"device": *device}).Debug("Already a member in the EAP link-layer multicast group")
 	} else if errNo > 0 {
-		log.Fatalf("Interface %s could not be configured to receive EAP packets: %s", *device, errNo)
+		log.WithFields(logrus.Fields{"device": *device}).Fatal("Could not join EAP link-layer multicast group")
 	}
 
 	return fd

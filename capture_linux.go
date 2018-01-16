@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"log"
 	"net"
 	"unsafe"
 )
@@ -11,12 +11,12 @@ import (
 func joinMulticastGroup(device *string) (fd int) {
 	iface, err := net.InterfaceByName(*device)
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
 	}
 
 	fd, err = unix.Socket(unix.AF_PACKET, unix.SOCK_RAW, unix.ETH_P_PAE)
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
 	}
 
 	mreq := unix.PacketMreq{
@@ -36,7 +36,7 @@ func joinMulticastGroup(device *string) (fd int) {
 		0,
 	)
 	if errNo > 0 {
-		log.Fatal(errNo)
+		log.WithFields(logrus.Fields{"interface": *device, "error": errNo}).Fatal("Could not join EAP link-layer multicast group")
 	}
 
 	sockAddrLinkLayer := unix.RawSockaddrLinklayer{
@@ -52,7 +52,7 @@ func joinMulticastGroup(device *string) (fd int) {
 		unsafe.Sizeof(sockAddrLinkLayer),
 	)
 	if errNo > 0 {
-		log.Fatal(errNo)
+		log.WithFields(logrus.Fields{"interface": *device, "error": errNo}).Fatal("Error binding interface to socket")
 	}
 
 	return fd

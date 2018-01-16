@@ -4,7 +4,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"log"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,16 +24,16 @@ const ETHER_ADDR_LEN = 0x6
 func setupCaptureDevice(device *string, promiscuous *bool) ListenInterface {
 	handle, err := pcap.OpenLive(*device, snapshotLen, *promiscuous, pcap.BlockForever)
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
 	}
 	err = handle.SetDirection(pcap.DirectionIn)
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
 	}
 
 	err = handle.SetBPFFilter(filter)
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
 	}
 
 	fd := joinMulticastGroup(device)
@@ -50,11 +50,11 @@ func handleRouterPacket(packet gopacket.Packet, ignoreStart *bool, ignoreLogoff 
 	if eapolLayer := packet.Layer(layers.LayerTypeEAPOL); eapolLayer != nil {
 		eapol, _ := eapolLayer.(*layers.EAPOL)
 		if *ignoreStart && eapol.Type == layers.EAPOLTypeStart {
-			log.Println("Ignoring START packet from Router")
+			log.Debug("Ignoring START packet from Router")
 			return false
 		}
 		if *ignoreLogoff && eapol.Type == layers.EAPOLTypeLogOff {
-			log.Println("Ignoreing LOGOFF packet from Router")
+			log.Debug("Ignoring LOGOFF packet from Router")
 			return false
 		}
 	}
