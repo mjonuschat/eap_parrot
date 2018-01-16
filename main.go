@@ -41,6 +41,7 @@ func initLogging(logToSyslog bool, debug bool) {
 func main() {
 	ifWan := flag.String("if-wan", "eth1", "interface of the AT&T ONT/WAN")
 	ifRouter := flag.String("if-router", "eth2", "interface of the AT&T router")
+	vlanID := flag.Int("vlan", -1, "copy packet for this VLAN ID")
 	promiscuous := flag.Bool("promiscuous", false, "place interfaces into promiscuous mode instead of multicast")
 
 	ignoreStart := flag.Bool("ignore-start", false, "ignore EAPOL Start packets from router")
@@ -56,8 +57,8 @@ func main() {
 
 	log.Info("eap_parrot starting up...")
 	// Open devices
-	wanInterface := setupCaptureDevice(ifWan, promiscuous)
-	rtrInterface := setupCaptureDevice(ifRouter, promiscuous)
+	wanInterface := setupCaptureDevice(ifWan, promiscuous, vlanID)
+	rtrInterface := setupCaptureDevice(ifRouter, promiscuous, vlanID)
 
 	// Close devices on shutdown
 	shutdownHandler := func() {

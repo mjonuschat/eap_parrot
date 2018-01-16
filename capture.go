@@ -1,15 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	filter      string = "ether proto 0x888e"
-	snapshotLen int32  = 9000
 )
 
 type ListenInterface struct {
@@ -21,8 +17,12 @@ const ETHER_ADDR_LEN = 0x6
 
 // setupCaptureDevice opens the given device name for live capture.
 // It will only capture packets coming into the interface from the network.
-func setupCaptureDevice(device *string, promiscuous *bool) ListenInterface {
-	handle, err := pcap.OpenLive(*device, snapshotLen, *promiscuous, pcap.BlockForever)
+func setupCaptureDevice(device *string, promiscuous *bool, vlan *int) ListenInterface {
+	var filter = BPF_EAP_FILTER
+	if *vlan >= 0 {
+		filter = fmt.Sprintf("vlan %d and %s", *vlan, filter)
+	}
+	handle, err := pcap.OpenLive(*device, 9000, *promiscuous, pcap.BlockForever)
 	if err != nil {
 		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
 	}
