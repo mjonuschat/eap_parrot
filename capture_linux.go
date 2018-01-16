@@ -22,7 +22,7 @@ func joinMulticastGroup(device *string) (fd int) {
 	mreq := unix.PacketMreq{
 		Ifindex: int32(iface.Index),
 		Type:    unix.PACKET_MR_MULTICAST,
-		Alen:    ETHER_ADDR_LEN,
+		Alen:    hwAddressLength,
 		Address: [8]uint8{0x01, 0x80, 0xc2, 0x00, 0x00, 0x03},
 	}
 

@@ -8,17 +8,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ListenInterface contains the data structures for packet sniffing/copying.
 type ListenInterface struct {
 	fd     int
 	handle *pcap.Handle
 }
 
-const ETHER_ADDR_LEN = 0x6
+const hwAddressLength = 0x6
+const bpfEapFilter = "ether proto 0x888e"
 
 // setupCaptureDevice opens the given device name for live capture.
 // It will only capture packets coming into the interface from the network.
 func setupCaptureDevice(device *string, promiscuous *bool, vlan *int) ListenInterface {
-	var filter = BPF_EAP_FILTER
+	var filter = bpfEapFilter
 	if *vlan >= 0 {
 		filter = fmt.Sprintf("vlan %d and %s", *vlan, filter)
 	}

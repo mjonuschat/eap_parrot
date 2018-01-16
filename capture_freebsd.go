@@ -40,7 +40,7 @@ func joinMulticastGroup(device *string) (fd int) {
 		Index:  0,
 		Type:   0,
 		Nlen:   0,
-		Alen:   ETHER_ADDR_LEN,
+		Alen:   hwAddressLength,
 		Slen:   0,
 		Data:   [8]uint8{0x01, 0x80, 0xc2, 0x00, 0x00, 0x03},
 	}
