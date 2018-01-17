@@ -8,15 +8,15 @@ import (
 )
 
 // Setup the given device to join the EAP(OL) link layer multicast group.
-func joinMulticastGroup(device *string) (fd int) {
-	iface, err := net.InterfaceByName(*device)
+func joinMulticastGroup(device string) (fd int) {
+	iface, err := net.InterfaceByName(device)
 	if err != nil {
-		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
+		log.WithFields(logrus.Fields{"interface": device}).Fatal(err)
 	}
 
 	fd, err = unix.Socket(unix.AF_PACKET, unix.SOCK_RAW, unix.ETH_P_PAE)
 	if err != nil {
-		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
+		log.WithFields(logrus.Fields{"interface": device}).Fatal(err)
 	}
 
 	mreq := unix.PacketMreq{
@@ -36,7 +36,7 @@ func joinMulticastGroup(device *string) (fd int) {
 		0,
 	)
 	if errNo > 0 {
-		log.WithFields(logrus.Fields{"interface": *device, "error": errNo}).Fatal("Could not join EAP link-layer multicast group")
+		log.WithFields(logrus.Fields{"interface": device, "error": errNo}).Fatal("Could not join EAP link-layer multicast group")
 	}
 
 	sockAddrLinkLayer := unix.RawSockaddrLinklayer{
@@ -52,7 +52,7 @@ func joinMulticastGroup(device *string) (fd int) {
 		unsafe.Sizeof(sockAddrLinkLayer),
 	)
 	if errNo > 0 {
-		log.WithFields(logrus.Fields{"interface": *device, "error": errNo}).Fatal("Error binding interface to socket")
+		log.WithFields(logrus.Fields{"interface": device, "error": errNo}).Fatal("Error binding interface to socket")
 	}
 
 	return fd

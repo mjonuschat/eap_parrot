@@ -1,0 +1,14 @@
+[network]
+wan_interface="eth1"
+router_interface="eth2"
+vlan_id=-1
+promiscuous_mode=false
+
+[logging]
+syslog=false
+debug=false
+debug_packets=false
+
+[ignore]
+start=false
+logoff=false

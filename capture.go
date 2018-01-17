@@ -19,23 +19,23 @@ const bpfEapFilter = "ether proto 0x888e"
 
 // setupCaptureDevice opens the given device name for live capture.
 // It will only capture packets coming into the interface from the network.
-func setupCaptureDevice(device *string, promiscuous *bool, vlan *int) ListenInterface {
+func setupCaptureDevice(device string) ListenInterface {
 	var filter = bpfEapFilter
-	if *vlan >= 0 {
-		filter = fmt.Sprintf("vlan %d and %s", *vlan, filter)
+	if config.Network.VlanID >= 0 {
+		filter = fmt.Sprintf("vlan %d and %s", config.Network.VlanID, filter)
 	}
-	handle, err := pcap.OpenLive(*device, 9000, *promiscuous, pcap.BlockForever)
+	handle, err := pcap.OpenLive(device, 9000, config.Network.Promiscuous, pcap.BlockForever)
 	if err != nil {
-		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
+		log.WithFields(logrus.Fields{"interface": device}).Fatal(err)
 	}
 	err = handle.SetDirection(pcap.DirectionIn)
 	if err != nil {
-		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
+		log.WithFields(logrus.Fields{"interface": device}).Fatal(err)
 	}
 
 	err = handle.SetBPFFilter(filter)
 	if err != nil {
-		log.WithFields(logrus.Fields{"interface": *device}).Fatal(err)
+		log.WithFields(logrus.Fields{"interface": device}).Fatal(err)
 	}
 
 	fd := joinMulticastGroup(device)
@@ -48,14 +48,14 @@ func setupCaptureDevice(device *string, promiscuous *bool, vlan *int) ListenInte
 
 // Decide if we want to forward a packet from the router.
 // We might want to ignore START and LOGOFF packets emitted by the AT&T CPE.
-func handleRouterPacket(packet gopacket.Packet, ignoreStart *bool, ignoreLogoff *bool) bool {
+func handleRouterPacket(packet gopacket.Packet) bool {
 	if eapolLayer := packet.Layer(layers.LayerTypeEAPOL); eapolLayer != nil {
 		eapol, _ := eapolLayer.(*layers.EAPOL)
-		if *ignoreStart && eapol.Type == layers.EAPOLTypeStart {
+		if config.Ignore.Start && eapol.Type == layers.EAPOLTypeStart {
 			log.Debug("Ignoring START packet from Router")
 			return false
 		}
-		if *ignoreLogoff && eapol.Type == layers.EAPOLTypeLogOff {
+		if config.Ignore.Logoff && eapol.Type == layers.EAPOLTypeLogOff {
 			log.Debug("Ignoring LOGOFF packet from Router")
 			return false
 		}

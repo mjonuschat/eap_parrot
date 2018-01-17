@@ -7,27 +7,28 @@ import (
 	"github.com/sirupsen/logrus/hooks/syslog"
 	"golang.org/x/sys/unix"
 	"io/ioutil"
+	"fmt"
 )
 
 var log = logrus.New()
 
-func logPacket(device string, packet gopacket.Packet, verbose bool) {
+func logPacket(device string, packet gopacket.Packet) {
 	packetString := packet.String()
-	if verbose {
+	if config.Logging.DebugPackets {
 		packetString = packet.Dump()
 	}
 	log.WithFields(logrus.Fields{"interface": device, "packet": packetString}).Debug("Received EAP/EAPOL packet")
 }
 
 // Configure logging
-func initLogging(logToSyslog bool, debug bool) {
+func initLogging() {
 	log.Formatter = &logrus.TextFormatter{FullTimestamp: true}
-	if debug {
+	if config.Logging.Debug || config.Logging.DebugPackets {
 		log.SetLevel(logrus.DebugLevel)
 	} else {
 		log.SetLevel(logrus.InfoLevel)
 	}
-	if logToSyslog {
+	if config.Logging.Syslog {
 		hook, err := syslog.NewSyslogHook("", "", 7, "")
 		if err != nil {
 			log.Error("Unable to connect to local syslog daemon")
@@ -39,26 +40,17 @@ func initLogging(logToSyslog bool, debug bool) {
 }
 
 func main() {
-	ifWan := flag.String("if-wan", "eth1", "interface of the AT&T ONT/WAN")
-	ifRouter := flag.String("if-router", "eth2", "interface of the AT&T router")
-	vlanID := flag.Int("vlan", -1, "copy packet for this VLAN ID")
-	promiscuous := flag.Bool("promiscuous", false, "place interfaces into promiscuous mode instead of multicast")
-
-	ignoreStart := flag.Bool("ignore-start", false, "ignore EAPOL Start packets from router")
-	ignoreLogoff := flag.Bool("ignore-logoff", false, "ignore EAPOL Logoff packets from router")
-
-	debug := flag.Bool("debug", false, "enable debug-level logging")
-	debugPackets := flag.Bool("debug-packets", false, "print packets in hex format to assist with debugging")
-	logToSyslog := flag.Bool("syslog", false, "log to syslog")
+	configFile := flag.String("config", "/etc/eap_parrot.toml", "Full path to the config file")
 
 	flag.Parse()
 
-	initLogging(*logToSyslog, *debug || *debugPackets)
+	initConfiguration(*configFile)
+	initLogging()
 
 	log.Info("eap_parrot starting up...")
 	// Open devices
-	wanInterface := setupCaptureDevice(ifWan, promiscuous, vlanID)
-	rtrInterface := setupCaptureDevice(ifRouter, promiscuous, vlanID)
+	wanInterface := setupCaptureDevice(config.Network.Wan)
+	rtrInterface := setupCaptureDevice(config.Network.Router)
 
 	// Close devices on shutdown
 	shutdownHandler := func() {
@@ -76,11 +68,11 @@ func main() {
 	for {
 		select {
 		case packet := <-wanSource.Packets():
-			logPacket(*ifWan, packet, *debugPackets)
+			logPacket(config.Network.Wan, packet)
 			emitPacket(packet, rtrInterface.handle)
 		case packet := <-rtrSource.Packets():
-			logPacket(*ifRouter, packet, *debugPackets)
-			if handleRouterPacket(packet, ignoreStart, ignoreLogoff) {
+			logPacket(config.Network.Router, packet)
+			if handleRouterPacket(packet) {
 				emitPacket(packet, wanInterface.handle)
 			}
 		}

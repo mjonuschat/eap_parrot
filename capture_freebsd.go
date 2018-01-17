@@ -24,13 +24,13 @@ type IfReq struct {
 }
 
 // Setup the given device to join the EAP(OL) link layer multicast group.
-func joinMulticastGroup(device *string) (fd int) {
+func joinMulticastGroup(device string) (fd int) {
 	var ifname [16]byte
-	copy(ifname[:], *device)
+	copy(ifname[:], device)
 
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
 	if err != nil {
-		log.WithFields(logrus.Fields{"device": *device}).Fatal("Error opening socket")
+		log.WithFields(logrus.Fields{"device": device}).Fatal("Error opening socket")
 	}
 
 	ifReq := IfReq{
@@ -52,9 +52,9 @@ func joinMulticastGroup(device *string) (fd int) {
 		uintptr(unsafe.Pointer(&ifReq)),
 	)
 	if errNo == syscall.EADDRINUSE {
-		log.WithFields(logrus.Fields{"device": *device}).Debug("Already a member in the EAP link-layer multicast group")
+		log.WithFields(logrus.Fields{"device": device}).Debug("Already a member in the EAP link-layer multicast group")
 	} else if errNo > 0 {
-		log.WithFields(logrus.Fields{"device": *device}).Fatal("Could not join EAP link-layer multicast group")
+		log.WithFields(logrus.Fields{"device": device}).Fatal("Could not join EAP link-layer multicast group")
 	}
 
 	return fd
