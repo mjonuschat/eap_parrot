@@ -22,7 +22,7 @@ const bpfEapFilter = "ether proto 0x888e"
 func setupCaptureDevice(device string) ListenInterface {
 	var filter = bpfEapFilter
 	if config.Network.VlanID >= 0 {
-		filter = fmt.Sprintf("vlan %d and %s", config.Network.VlanID, filter)
+		filter = fmt.Sprintf("%s or (vlan %d and %s)", filter, config.Network.VlanID, filter)
 	}
 	handle, err := pcap.OpenLive(device, 9000, config.Network.Promiscuous, pcap.BlockForever)
 	if err != nil {
