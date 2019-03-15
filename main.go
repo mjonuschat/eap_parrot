@@ -7,7 +7,6 @@ import (
 	"github.com/sirupsen/logrus/hooks/syslog"
 	"golang.org/x/sys/unix"
 	"io/ioutil"
-	"fmt"
 )
 
 var log = logrus.New()
