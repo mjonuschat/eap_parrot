@@ -1,48 +1,37 @@
 package main
 
 import (
+	"unsafe"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"syscall"
-	"unsafe"
 )
 
 // Data structure needed by the SIOCADDMULTI ioctl call.
 type IfReq struct {
 	Name [16]byte
-	// struct sockaddr {
-	Len    uint8
-	Family uint8
-	Data   [8]byte
-	// } ifr_addr
+	unix.RawSockaddr
 }
 
 // Setup the given device to join the EAP(OL) link layer multicast group.
 func joinMulticastGroup(device string) (fd int) {
-	var ifname [16]byte
-	copy(ifname[:], device)
-
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
 	if err != nil {
 		log.WithFields(logrus.Fields{"device": device}).Fatal("Error opening socket")
 	}
 
-	ifReq := IfReq{
-		Name:   ifname,
-		Len:    unix.SizeofSockaddrDatalink,
-		Family: unix.AF_UNSPEC,
-		Data:   [8]uint8{0x01, 0x80, 0xc2, 0x00, 0x00, 0x03},
-	}
+	var ifReq IfReq
+	copy(ifReq.Name[:len(ifReq.Name)-1], device) // like strlcpy(), keep \0 terminated
+	ifReq.Len = byte(unsafe.Sizeof(ifReq.RawSockaddr))
+	ifReq.Family = unix.AF_UNSPEC
+	// Data is signed or unsigned depending on platform (C char)
+	type unsignedData = [unsafe.Sizeof(ifReq.Data)]byte
+	*(*unsignedData)(unsafe.Pointer(&ifReq.Data)) = unsignedData{0x01, 0x80, 0xc2, 0x00, 0x00, 0x03}
 
-	_, _, errNo := unix.Syscall(
-		unix.SYS_IOCTL,
-		uintptr(fd),
-		uintptr(unix.SIOCADDMULTI),
-		uintptr(unsafe.Pointer(&ifReq)),
-	)
-	if errNo == syscall.EADDRINUSE {
+	err = unix.IoctlSetInt(fd, unix.SIOCADDMULTI, int(uintptr(unsafe.Pointer(&ifReq))))
+	if err == unix.EADDRINUSE {
 		log.WithFields(logrus.Fields{"device": device}).Debug("Already a member in the EAP link-layer multicast group")
-	} else if errNo > 0 {
+	} else if err != nil {
 		log.WithFields(logrus.Fields{"device": device}).Fatal("Could not join EAP link-layer multicast group")
 	}
 
